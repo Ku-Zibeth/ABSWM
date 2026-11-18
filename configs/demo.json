@@ -1,0 +1,10 @@
+{
+  "name": "demo",
+  "extends": "full.json",
+  "roads": {"train": 24, "val": 6, "test": 6},
+  "epochs": 10,
+  "warmup_epochs": 2,
+  "train_windows": 768,
+  "val_windows": 128,
+  "test_windows": 128
+}
