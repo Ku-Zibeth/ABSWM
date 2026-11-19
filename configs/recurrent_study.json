@@ -1,0 +1,25 @@
+{
+  "seed": 20261119,
+  "train_windows": 768,
+  "train_history_steps": 150,
+  "batch_size": 64,
+  "epochs": 5,
+  "learning_rate_observer": 0.00015,
+  "learning_rate_transition": 0.0005,
+  "transition_width": 32,
+  "transition_limit": 0.015,
+  "state_weight": 1.0,
+  "force_weight": 0.15,
+  "action_delta_weight": 0.35,
+  "latent_drift_weight": 0.02,
+  "torque_offset_nm": 600,
+  "forecast_steps": [1, 5, 10, 15, 20],
+  "reobserve_step": 10,
+  "prefix_slip_caps": [0.02, 0.05, 0.15],
+  "bootstrap_samples": 2000,
+  "acceptance": {
+    "max_factual_relative_regression": 0.05,
+    "min_wheel_action_delta_relative_gain": 0.05,
+    "min_direction_truth_rad_s": 1.0
+  }
+}

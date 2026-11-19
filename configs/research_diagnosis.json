@@ -1,0 +1,13 @@
+{
+  "seed": 20261118,
+  "grid_steps": 1001,
+  "forecast_steps": [1, 2, 5, 10, 15, 20],
+  "history_fractions": [0.2, 0.5, 1.0],
+  "probe_slips": [0.02, 0.1, 0.2, 0.6],
+  "probe_ridge": 0.01,
+  "pair_roads": {"A": "8fc6c969ed1a9cd3", "B": "7d6195bd8288c99a"},
+  "pair_caps": [0.02, 0.05, 0.1, 0.2],
+  "pair_torque_rates": [500, 1000, 1800, 3000],
+  "control_probe_seconds": [0.25, 0.5, 1, 2, 4, 8],
+  "bootstrap_samples": 2000
+}

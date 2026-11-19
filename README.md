@@ -3,6 +3,11 @@
 从四分之一车直线制动出发，比较传统辨识、直接最佳滑移率预测与物理增强动力学模型。
 本项目是研究原型；仿真结果不构成实车安全或性能证明。
 
+## ABSWM 2.0
+
+**E4 A 是 ABSWM 2.0 的正式基础模型。** 参考模型、训练种子和权重来源见 [模型登记](configs/abswm_2.json)。以这组权重为起点的递归状态更新和动作条件多步预测见 [递归预测研究与验收](docs/recurrent_study.md)。
+物理先验、结构化轮胎 Decoder、在线潜状态修正及跨函数族验收见 [物理轮胎先验与潜状态修正](docs/physics_prior_latent_refinement.md)。
+
 ## 快速开始
 
 使用 Python 3.12。在 PowerShell 7 中执行：
@@ -26,6 +31,17 @@ uv run abswm run --config configs/full.json --output outputs/full
 演示配置使用 24/6/6 组路面、10 轮，供验证全流程；不能用它替代完整研究结果。
 同一输出目录只能用于同一配置，防止混用数据。
 
+### 复现 ABSWM 2.0
+
+以下命令使用模型登记里的默认输出路径。第二步生成 E4 A 权重，随后用于递归预测和物理先验实验。
+
+```powershell
+uv run abswm run --config configs/full.json --output outputs/diagnosis_reproduced
+uv run python scripts/decoder_study.py
+uv run python scripts/recurrent_study.py
+uv run python scripts/physics_prior_study.py
+```
+
 ## 分步运行
 
 ```powershell
@@ -39,6 +55,8 @@ uv run abswm evaluate --config configs/demo.json --output outputs/demo
 再次运行相同命令会复用数据和完成的模型；评估重新生成。失败命令返回非零退出码。
 
 详细假设、指标定义、因果时序、数值误差和扩展边界见 [方法说明](docs/method.md)。
+开放环误差、低滑移辨识、潜在空间和 PI 闭环归因见 [ABSWM 2.0 第一阶段诊断](docs/research_diagnosis.md)。
+冻结及联合训练的峰值和完整附着曲线实验见 [潜在状态解码研究](docs/decoder_study.md)。
 
 ## 已运行实验
 

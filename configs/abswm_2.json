@@ -1,0 +1,9 @@
+{
+  "name": "ABSWM 2.0",
+  "reference_model": "e4_a",
+  "base_config": "full.json",
+  "decoder_config": "decoder_study.json",
+  "base_run": "outputs/diagnosis_reproduced",
+  "reference_run": "outputs/decoder_study",
+  "seeds": [11, 22, 33]
+}
