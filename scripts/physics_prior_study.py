@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from os import cpu_count
 from pathlib import Path
 
 from abswm.config import fingerprint, write_json
@@ -25,9 +26,12 @@ def main():
     parser.add_argument("--base", type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--recurrent", type=Path, default=Path("outputs/recurrent_study"))
-    parser.add_argument("--output", type=Path, default=Path("outputs/physics_prior"))
+    parser.add_argument("--output", type=Path, default=Path("outputs/physics_prior_parallel"))
     parser.add_argument("--stage", choices=("train", "audit", "run"), default="run")
+    parser.add_argument("--workers", type=int, help="Concurrent training jobs (default: up to four based on available CPUs)")
     args = parser.parse_args()
+    if args.workers is not None and args.workers < 1:
+        parser.error("--workers must be positive")
     registry = read_json(args.registry)
     base = (args.base or Path(registry["base_run"])).resolve()
     reference = (args.reference or Path(registry["reference_run"])).resolve()
@@ -36,6 +40,7 @@ def main():
         parser.error("Use a separate output directory")
     output.mkdir(parents=True, exist_ok=True)
     c, models = registered_reference(args.registry, base, reference)
+    workers = args.workers or min(4, max(1, (cpu_count() or 1)//c["torch_threads"]))
     d = read_json(args.config)
     physical_manifest = read_json(base/"data"/"manifest.json")
     validate_partitions(c, physical_manifest)
@@ -55,7 +60,8 @@ def main():
     write_json(output/"frozen_partitions.json", partitions)
     if not (output/"baseline_bias.csv").exists() or not (output/"figures"/"baseline_bias.png").exists():
         diagnose(args.registry, base, reference, recurrent, output)
-    fitted, prior, validation, rows = train(c, d, base, output, models, original, partitions, key)
+    print(f"Training workers: {workers}, PyTorch threads per worker: {c['torch_threads']}", flush=True)
+    fitted, prior, validation, rows = train(c, d, base, output, models, original, partitions, key, workers=workers)
     if args.stage == "run":
         from abswm.tire_prior_evaluation import evaluate
         evaluate(c, d, base, reference, recurrent, output, models, fitted, prior, validation, rows, original, partitions)

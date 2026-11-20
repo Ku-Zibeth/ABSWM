@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import copy
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
+from functools import partial
+from multiprocessing import get_context
 from time import perf_counter
 
 import numpy as np
@@ -147,7 +151,51 @@ def fit(c, d, model, variant, train, val, grid, prior, seed, epochs):
     return model.requires_grad_(False), logs
 
 
-def train(c, d, base, output, references, original, partitions, experiment_key):
+@dataclass
+class TrainingJob:
+    name: str
+    seed: int
+    variant: dict
+    dataset: str
+    epochs: int
+
+
+def train_job(job, *, c, d, directory, references, datasets, val, grid, prior, experiment_key):
+    name, seed, variant = job.name, job.seed, job.variant
+    path = directory/f"{name}_{seed}.pt"
+    if path.exists() and path.with_suffix(".csv").exists():
+        saved = torch.load(path, weights_only=True, map_location=c["device"])
+        if saved["key"] != experiment_key:
+            raise ValueError(f"Stale training checkpoint {path.name}")
+        return saved["summary"]
+
+    seed_everything(seed, c)
+    model = model_for(references[seed], variant).to(c["device"])
+    print(f"train {name} seed={seed}", flush=True)
+    start = perf_counter()
+    model, log = fit(c, d, model, variant, datasets[job.dataset], val, grid, prior, seed, job.epochs)
+    best = min(log, key=lambda r: r["val_score"])
+    summary = {"method": name, "seed": seed, "best_epoch": best["epoch"],
+               "seconds": perf_counter()-start, "prior_weight": variant.get("prior_weight"),
+               **{k: v for k, v in best.items() if k.startswith("val_")}}
+    write_csv(path.with_suffix(".csv"), log)
+    temp = path.with_suffix(".tmp")
+    torch.save({"key": experiment_key, "state": model.state_dict(), "summary": summary}, temp)
+    temp.replace(path)
+    print(f"done {name} seed={seed} val={best['val_score']:.5f} seconds={summary['seconds']:.1f}", flush=True)
+    return summary
+
+
+def init_training_worker(run_job):
+    global _worker_job
+    _worker_job = run_job
+
+
+def run_worker_job(job):
+    return _worker_job(job)
+
+
+def train(c, d, base, output, references, original, partitions, experiment_key, *, workers=1):
     directory = output/"models"
     directory.mkdir(exist_ok=True)
     grid_array = np.linspace(0, 1, d["train_grid"])
@@ -159,46 +207,36 @@ def train(c, d, base, output, references, original, partitions, experiment_key):
     val = tensors(c, d, val_suite, grid_array)
     mixed = tensors(c, d, mixed_windows(c, partitions["magic_train"], d["train_windows"]//2, d["seed"]), grid_array)
     mixed = {k: torch.cat((v[:d["train_windows"]-len(mixed[k])], mixed[k])) for k, v in ordinary.items()}
-    methods, summaries = {}, []
-
-    def run(name, seed, variant, train_data, epochs):
-        seed_everything(seed, c)
-        model = model_for(references[seed], variant).to(c["device"])
-        path = directory/f"{name}_{seed}.pt"
-        if path.exists() and path.with_suffix(".csv").exists():
-            saved = torch.load(path, weights_only=True, map_location=c["device"])
-            if saved["key"] != experiment_key:
-                raise ValueError(f"Stale training checkpoint {path.name}")
-            model.load_state_dict(saved["state"])
-            return model.eval().requires_grad_(False), saved["summary"]
-        print(f"train {name} seed={seed}", flush=True)
-        start = perf_counter()
-        model, log = fit(c, d, model, variant, train_data, val, grid, prior, seed, epochs)
-        best = min(log, key=lambda r: r["val_score"])
-        summary = {"method": name, "seed": seed, "best_epoch": best["epoch"], "seconds": perf_counter()-start,
-                   "prior_weight": variant.get("prior_weight"), **{k: v for k, v in best.items() if k.startswith("val_")}}
-        write_csv(path.with_suffix(".csv"), log)
-        temp = path.with_suffix(".tmp")
-        torch.save({"key": experiment_key, "state": model.state_dict(), "summary": summary}, temp)
-        temp.replace(path)
-        print(f"done {name} seed={seed} val={best['val_score']:.5f} seconds={summary['seconds']:.1f}", flush=True)
-        return model, summary
-
     pilot = {k: v[:d["pilot_windows"]] for k, v in ordinary.items()}
-    first = c["seeds"][0]
+    datasets = {"pilot": pilot, "ordinary": ordinary, "mixed": mixed}
+    run_job = partial(train_job, c=c, d=d, directory=directory, references=references, datasets=datasets,
+                      val=val, grid=grid, prior=prior, experiment_key=experiment_key)
     trials = []
     for weight in d["prior_weights"]:
-        _, result = run(f"pilot_prior_{weight:g}", first, {"prior": 4, "prior_weight": weight}, pilot, d["pilot_epochs"])
-        trials.append(result)
+        job = TrainingJob(f"pilot_prior_{weight:g}", c["seeds"][0], {"prior": 4, "prior_weight": weight},
+                          "pilot", d["pilot_epochs"])
+        trials.append(run_job(job))
     selected = min(trials, key=lambda r: r["val_score"])["prior_weight"]
     write_csv(output/"prior_pilot.csv", trials)
+
+    jobs = []
     for name, variant in MATRIX.items():
-        options = {**variant}
-        if options.get("prior"):
-            options["prior_weight"] = selected
-        for seed in c["seeds"]:
-            model, row = run(name, seed, options, mixed if options.get("mixed") else ordinary, d["epochs"])
-            methods[name, seed] = model
-            summaries.append(row)
+        options = {**variant, "prior_weight": selected} if variant.get("prior") else variant
+        dataset = "mixed" if options.get("mixed") else "ordinary"
+        jobs.extend(TrainingJob(name, seed, options, dataset, d["epochs"]) for seed in c["seeds"])
+    if workers > 1:
+        with ProcessPoolExecutor(max_workers=workers, mp_context=get_context("spawn"),
+                                 initializer=init_training_worker, initargs=(run_job,)) as executor:
+            summaries = list(executor.map(run_worker_job, jobs))
+    else:
+        summaries = [run_job(job) for job in jobs]
+
+    methods = {}
+    for job in jobs:
+        path = directory/f"{job.name}_{job.seed}.pt"
+        saved = torch.load(path, weights_only=True, map_location=c["device"])
+        model = model_for(references[job.seed], job.variant).to(c["device"])
+        model.load_state_dict(saved["state"])
+        methods[job.name, job.seed] = model.eval().requires_grad_(False)
     write_csv(output/"training_summary.csv", summaries)
     return methods, prior, val_suite, summaries

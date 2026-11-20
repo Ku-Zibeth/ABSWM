@@ -160,8 +160,10 @@ E4 A 和结构化模型分别有 10,305、10,502 个参数。E4 A 的窗口编�
 
 ~~~powershell
 uv run pytest -q
-uv run python scripts/physics_prior_study.py --config configs/physics_prior.json --output outputs/physics_prior
+uv run python scripts/physics_prior_study.py --workers 4
 ~~~
+
+正式训练以模型配置和种子为单位分派。8 核机器默认并行 4 组，每组使用基础配置中的 2 个 PyTorch CPU 线程。`--workers 1` 使用串行训练。默认结果目录为 `outputs/physics_prior_parallel`。
 
 原权重来源见 [E4 A 登记](../configs/abswm_2.json) 和 [递归研究](recurrent_study.md)。单独执行 P0 可运行 `uv run python scripts/tire_prior_diagnosis.py`。总脚本还支持 `--stage train` 及在已生成验证策略后重跑的 `--stage audit`。42 项测试通过，新增测试覆盖结构峰值和导数、训练专用先验、因果扭矩、轮速投影排除、在线权重不变、异常回退和留族拆分。
 
