@@ -1,0 +1,43 @@
+{
+  "partition_seed": 394221,
+  "test_roads": {"burckhardt": 12, "magic": 8, "rational": 8},
+  "magic_train_roads": 120,
+  "magic_validation_roads": 12,
+  "fit_windows": 768,
+  "validation_windows": 192,
+  "training_steps": 20,
+  "epochs": 8,
+  "batch_size": 32,
+  "learning_rate": 0.002,
+  "hypotheses": 4,
+  "horizon_ms": [50, 100, 200],
+  "validation_closed_roads": 4,
+  "formal_closed_roads": {"burckhardt": 6, "magic": 3, "rational": 3},
+  "initial_conditions": [[15.0, 0.0, 0.0], [30.0, 0.025, 75.0]],
+  "options": {
+    "high_penalty": 0.6,
+    "lock_penalty": 0.8,
+    "smooth_penalty": 0.006,
+    "terminal_penalty": 0.16,
+    "cvar_level": 0.35,
+    "cvar_mix": 0.35,
+    "explore_high_limit": 0.25,
+    "explore_lock_limit": 0.10,
+    "observation_scale": 0.05
+  },
+  "observation_scales": [0.025, 0.05, 0.1, 0.2],
+  "likelihood_reliability": 0.25,
+  "min_effective_fraction": 0.29,
+  "loss_weights": {"rollout": 1.0, "action": 0.4, "ranking": 0.14, "risk": 0.2, "probability": 0.15},
+  "tie_margin_mu": 0.012,
+  "bootstrap_samples": 2000,
+  "acceptance": {
+    "min_distance_gain_fraction": 0.01,
+    "max_high_slip_regression_s": 0.015,
+    "max_lock_regression_s": 0.005,
+    "max_failure_regression": 0.0,
+    "max_high_slip_fnr": 0.15,
+    "max_brier": 0.08,
+    "max_90pct_coverage_error": 0.10
+  }
+}

@@ -8,6 +8,14 @@
 **E4 A 是 ABSWM 2.0 的正式基础模型。** 参考模型、训练种子和权重来源见 [模型登记](configs/abswm_2.json)。以这组权重为起点的递归状态更新和动作条件多步预测见 [递归预测研究与验收](docs/recurrent_study.md)。
 物理先验、结构化轮胎 Decoder、在线潜状态修正及跨函数族验收见 [物理轮胎先验与潜状态修正](docs/physics_prior_latent_refinement.md)。
 
+## ABSWM 3.0 研究阶段
+
+在冻结的四分之一车仿真中，E4 A 直接参与 MPC 决策，比 E4 A + PI 平均缩短 1.02 m。匹配的主动概率 MPC 比非主动组平均缩短 0.023 m，未达到预登记的升级门槛。E4 A 仍是正式基础模型。研究包括概率观察器、反事实训练、信息子空间修正、主动寻峰、风险消融及独立跨族测试。 [ABSWM 3.0 研究报告与复现命令](docs/active_probabilistic_world_model.md)
+
+## ABSWM 3.1 研究阶段
+
+独立正式实验完成 2,496 条闭环对照。自适应假设刷新使匹配动态工况的制动力恢复时间缩短约 80 ms，但两阶段主动规划没有稳定的闭环收益，恒定路面距离和概率覆盖未通过验收。E4 A 仍是正式基础模型。 [ABSWM 3.1 研究报告与复现命令](docs/adaptive_belief_feedback_study.md)
+
 ## 快速开始
 
 使用 Python 3.12。在 PowerShell 7 中执行：
@@ -39,7 +47,7 @@ uv run abswm run --config configs/full.json --output outputs/full
 uv run abswm run --config configs/full.json --output outputs/diagnosis_reproduced
 uv run python scripts/decoder_study.py
 uv run python scripts/recurrent_study.py
-uv run python scripts/physics_prior_study.py
+uv run python scripts/physics_prior_study.py --output outputs/physics_prior
 ```
 
 ## 分步运行
@@ -64,7 +72,7 @@ uv run abswm evaluate --config configs/demo.json --output outputs/demo
 到 2 m/s 的平均制动距离为：真实峰值参考 72.67 m、在线非线性最小二乘辨识 73.10 m、
 直接峰值回归 73.22 m、固定参考 74.52 m、世界模型峰值参考 78.50 m。
 在这个路面函数族和控制器设置下，历史窗口改善了学习模型的轮速预测，世界模型的峰值参考仍弱于传统辨识。
-这里的闭环仅用世界模型提供滑移率参考，尚未检验基于模型比较未来制动动作能否改善控制。
+这批历史闭环用世界模型提供滑移率参考。3.0 的独立实验另外检验了由模型预测直接选择制动动作的闭环表现。
 
 训练数据、权重、轨迹和图表由本地命令生成，保存在 Git 忽略的 `outputs/` 目录。
 运行完整配置后可查看 `outputs/full/report.md`。

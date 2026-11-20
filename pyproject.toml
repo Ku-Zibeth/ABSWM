@@ -13,6 +13,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
+research = [
+    "numba>=0.68.1",
+]
 
 [project.scripts]
 abswm = "abswm.cli:main"
