@@ -1,0 +1,35 @@
+{
+  "partition_seed": 829437,
+  "data_sampling_seed": 866219,
+  "epoch_multipliers": [1, 2, 4, 8],
+  "window_multipliers": [1, 2, 4, 8, 16],
+  "road_multipliers": [1, 2, 4, 8],
+  "final_constant_roads": [18, 12, 12],
+  "final_dynamic_repeats": 3,
+  "bootstrap_samples": 2000,
+  "tie_margin": 0.012,
+  "selection": {
+    "action_regret_weight": 0.5,
+    "action_wheel_weight": 0.35,
+    "force_weight": 0.15,
+    "epoch_material_gain": 0.01,
+    "b4_min_gain": 0.03,
+    "b4_other_metric_max_regression": 0.02,
+    "ranking_max_drop": 0.01,
+    "violation_max_increase": 0.01
+  },
+  "upgrade_gates": {
+    "min_action_rmse_gain": 0.05,
+    "max_force_rmse_regression": 0.05,
+    "min_action_regret_gain": 0.05,
+    "max_ranking_drop": 0.01,
+    "max_high_slip_fnr_increase": 0.02,
+    "max_worst_family_high_slip_fnr": 0.15,
+    "max_violation_increase": 0.01,
+    "min_constant_distance_gain": 0.01,
+    "max_dynamic_distance_regression": 0.01,
+    "max_high_slip_time_increase": 0.015,
+    "max_lock_time_increase": 0.005,
+    "max_failure_rate_increase": 0.0
+  }
+}
