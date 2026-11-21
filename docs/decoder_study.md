@@ -135,18 +135,7 @@ E4 A 的 100 ms 车速、轮速和滑移率 RMSE 均比 World 小，轮速在增
 6. **模型仍依赖 Burckhardt 训练分布。** 尾部压力测试表明同一初始历史支持多条曲线。即使看到部分失配尾部，E4 A 仍把降低后的尾部往训练分布拉回。
 7. **建议以 E4 A 作为下一阶段递归世界模型的初始化。** 同时保留冻结 E3 作为表征对照、E2 作为独立峰值基线。递归实验以多步候选动作表现、弱激励及独立轮胎函数测试作为验收指标。
 
-## 复现
-
-在项目根目录用 PowerShell 7 运行。已有第一阶段基础输出时，可直接运行后两条命令。
-
-~~~powershell
-uv sync --extra dev
-uv run abswm run --config configs/full.json --output outputs/diagnosis_reproduced
-uv run pytest -q
-uv run python scripts/decoder_study.py --base outputs/diagnosis_reproduced --config configs/decoder_study.json --output outputs/decoder_study
-~~~
-
-训练、评价和原基线日志分别保存在新输出目录及其子目录。各轮训练数据和权重的来源由基础运行的 manifest 与新实验的 experiment.json 记录。evaluation.json 保存测试档案和评价源码哈希，训练配置、源代码或基础模型指纹变化时使用新的输出目录。
+## 计算开销与测试
 
 在现有 Windows CPU 环境中，原基础实验九个模型训练总计约 932 s。新实验含试训及冻结对照共约 799 s，完成评价、计时和出图用 147 s。E2、E3、E4 A 的单种子训练用时均值约 2.1、9.0、11.1 s。E4 B、C、D 和峰区加权版需反向传播 20 步车辆状态，单种子平均约 53–56 s。每个模型的实测记录见训练清单及 CSV。
 
@@ -163,17 +152,5 @@ uv run python scripts/decoder_study.py --base outputs/diagnosis_reproduced --con
 | NLS | 3 个逐窗估计系数 | 0 | 41.58 | 57.45 |
 
 时延为各训练种子 p95 的均值。NLS 这里逐窗口冷启动，包含拟合时间。原闭环利用上一估计热启动，计时协议不同。
-
-| 输出文件 | 内容 |
-|---|---|
-| `models/*_history.csv`、`training_summary.json`、`matched_frozen_training.json` | 原始和新增的各轮损失、训练时长、最佳轮和权重 |
-| `weight_tuning.csv`、`selected_weights.json`、`linear_probe_fit.csv` | 权重试训、选中系数和线性探针拟合记录 |
-| `comparison.csv`、`test_metrics.csv`、`stratified_comparison.csv` | 统一结果、逐种子稳定性、路面族及观测覆盖分层 |
-| `window_errors.csv`、`paired_differences.csv` | 同测试窗误差和路面配对差值 |
-| `pair_comparison.csv`、`pair_estimates.csv`、`pair_curves.npz` | A/B 四个覆盖上限的曲线、峰值和每次预测 |
-| `horizon_comparison.csv`、`action_comparison.csv`、`latent_probes.csv` | 多步状态、同历史候选动作与潜在物理量探针 |
-| `tail_stress_comparison.csv`、`tail_stress.csv`、`tail_stress_protocol.json` | 分布变化下的完整与尾部预测误差 |
-| `inference_timing.csv`、`evaluation.json` | 参数量、调用时延、验证入选 E4 和测试输入校验 |
-| `figures/pair_curves.png`、`figures/peak_errors.png`、`figures/dynamics.png` | 真实及预测曲线、峰值比较、多步动力学误差 |
 
 31 项自动化测试通过。其中新增测试覆盖冻结 Encoder 的梯度和优化前后权重、同一潜在向量查询多点的物理约束、标签隔离、重复路面拒绝、联合训练梯度及压力测试的模拟一致性。另核对 15 个冻结权重的 Encoder 与各自原权重逐张量一致，15 个 E4 Encoder 均已更新。

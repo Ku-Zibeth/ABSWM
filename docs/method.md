@@ -27,7 +27,7 @@ m\dot v=-F_b,\qquad J\dot\omega=RF_b-T_b,
 编码器默认额外计算两个确定性特征：过去速度差对应的 `-delta_v/(2*g*dt)` 和 `delta_lambda/(20*dt)`，
 第一行补零并裁剪到 `[-5,5]`。它们只利用同一历史中的相邻观测，不新增传感器或真值输入；
 这样避免相邻速度变化在整体车速归一化后过小。direct 和 world 共享该处理；current 消融先截取当前行，
-因而两个差分特征均为零。`encoder_difference_features=false` 可复现无差分输入版本。
+因而两个差分特征均为零。
 
 `WorldModel.rollout(history, actions)` 接收 `[batch,L,4]` 和 `[batch,H]`，返回 `[batch,H,2]` 的未来状态。
 隐状态是从真实历史推断的恒定路面上下文，预测中不递归编码虚构观测。

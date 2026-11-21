@@ -144,32 +144,3 @@ C11 相对 C6 平均少走 0.347 m [−1.493, 0.678]。匹配六路面上，冻�
 局限包括验证闭环和测试路面簇规模小、均为无噪声恒定路面、四个概率原型只能覆盖部分轮胎形状，以及以 5 ms 单步观测方案估算探索收益。未做实车、噪声、动态附着或承诺探索段的正式闭环。主动方案目前采用离线有限反馈审计与在线代理分数；结合多个未来观测分支优化后续反馈控制的收益仍待验证。下一阶段优先在模型失配明显的工况加入校准后的后验刷新，再用匹配的强传统寻峰器和短段反馈规划验证真实信息价值。
 
 已完成整套冒烟运行，当前仓库 54 项测试通过。正式闭环的首至末缓存时间跨度约 379 s，开环及报告阶段约 393 s。C13 的逐轨迹百分位中位数 p50/p95 为 1.025/1.090 ms，最大值 76.30 ms，信息计算 p95 约 0.447 ms，真实后验更新约 0.296 ms。50–100 ms 多候选滚动的离线 p95 约 0.088 ms，单候选约 0.022 ms。原递归的在线 p95 为 14.44 ms。计算开销只作为诊断，仿真固定按 5 ms 时序推进。
-
-## 8. 复现与产物
-
-在项目根目录使用 PowerShell 7。命令复用已登记的历史权重。匹配配置的 3.0 检查点和逐仿真缓存也可直接复用。
-
-```powershell
-uv sync --extra dev --extra research
-uv run pytest -q
-uv run python scripts/active_probabilistic_study.py --smoke --workers 1
-uv run python scripts/active_probabilistic_study.py --stage p0 --workers 4
-uv run python scripts/active_probabilistic_study.py --stage train --workers 4
-uv run python scripts/active_probabilistic_study.py --stage validation --workers 4
-uv run python scripts/active_probabilistic_study.py --stage closed --workers 4
-uv run python scripts/active_probabilistic_study.py --stage open --workers 4
-uv run python scripts/active_probabilistic_study.py --stage audit --workers 4
-```
-
-正式阶段也可用 `uv run python scripts/active_probabilistic_study.py --workers 4` 串接。单独的 `--stage test` 从已冻结的验证策略继续。已有历史模型可传 `--registry`、`--recurrent`、`--prior`，默认复用 `configs/abswm_2.json`、`outputs/recurrent_study`、`outputs/physics_prior`。可选 `research` 依赖加速预测，NumPy 路径也可运行。正式产物在 `outputs/active_probabilistic/`，冒烟结果在独立目录。权重及轨迹沿用项目的 Git 忽略规则。
-
-| 产物 | 内容 |
-|---|---|
-| `experiment.json`、`frozen_partitions.json`、`p0_policy.json`、`validation_policy.json`、`model_registry.json`、`acceptance.json` | 数据和基线指纹、划分、共用时域、校准及预登记验收 |
-| `models/`、`training_summary.csv`、`loss_ablation_validation.csv`、`data/` | 24 组训练检查点、逐轮记录和反事实监督 |
-| `probability_calibration.csv`、`risk_calibration.csv`、`risk_evaluation.csv`、`belief_update.csv`、`refinement_comparison.csv`、`representation_diagnostics.csv`、`curve_diagnostics.csv` | 预测区间、概率评分、风险识别、真实更新和表示诊断 |
-| `action_prediction.csv`、`action_ranking.csv`、`action_regret.csv`、`paired_action_statistics.csv`、`information_gain.csv` | 反事实预测、响应、排序、后悔、路面簇开环统计及信息价值 |
-| `closed_loop_summary.csv`、`closed_loop_by_road.csv`、`generalization.csv`、`paired_statistics.csv`、`control_ablation.csv` | 1,044 条闭环及消融、跨族结果和按路面配对的统计 |
-| `exploration_events.csv`、`safety_events.csv`、`decision_audit.json`、`exploration_weight_sensitivity.csv`、`traces/`、`timing.csv`、`figures/` | 修改原因、安全回退、实际动作、后续真实反馈、权重敏感性、计算开销与图表 |
-
-新增 `active_rollout.py`、`active_fast.py`、`active_data.py`、`active_training.py`、`active_belief.py`、`active_information.py`、`active_control.py`、`active_experiment.py`、`active_evaluation.py`、`active_open_loop.py`、`active_representation.py`、`active_metrics.py`、`active_report.py`、`active_audit.py`。入口、配置和测试为 `scripts/active_probabilistic_study.py`、`configs/active_probabilistic.json`、`tests/test_active_probabilistic.py`。

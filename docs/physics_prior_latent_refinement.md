@@ -154,26 +154,6 @@ E4 A 和结构化模型分别有 10,305、10,502 个参数。E4 A 的窗口编�
 
 **下一步证据要求。** 保留匹配的混训结构头作为跨族候选，检验更短或信息选择式的历史修正。对未观测区保留曲线假设的分歧，并检查其置信范围、动作收益排序和高滑移漏报。继续使用冻结独立路面评价，待动作、风险和效率同时达到验收后再选择 WM-MPC 的预测模型。
 
-## 复现与交付
+## 测试覆盖
 
-已有 E4 A 和递归研究结果时，在项目根目录以 PowerShell 7 运行。
-
-~~~powershell
-uv run pytest -q
-uv run python scripts/physics_prior_study.py --workers 4
-~~~
-
-正式训练以模型配置和种子为单位分派。8 核机器默认并行 4 组，每组使用基础配置中的 2 个 PyTorch CPU 线程。`--workers 1` 使用串行训练。默认结果目录为 `outputs/physics_prior_parallel`。
-
-原权重来源见 [E4 A 登记](../configs/abswm_2.json) 和 [递归研究](recurrent_study.md)。单独执行 P0 可运行 `uv run python scripts/tire_prior_diagnosis.py`。总脚本还支持 `--stage train` 及在已生成验证策略后重跑的 `--stage audit`。42 项测试通过，新增测试覆盖结构峰值和导数、训练专用先验、因果扭矩、轮速投影排除、在线权重不变、异常回退和留族拆分。
-
-| 输出 | 内容 |
-|---|---|
-| `experiment.json`、`frozen_partitions.json`、`validation_policy.json`、`acceptance.json` | 独立配置、基线指纹、新旧路面标识、测试前选择和四类物理与控制验收 |
-| `physical_training_roads.csv`、`physical_distribution.csv`、`physical_correlations.csv`、`baseline_bias.csv`、`conditional_prior.csv` | P0 物理统计、双侧偏差和训练条件分布 |
-| `models/*.csv`、`training_summary.csv`、`prior_pilot.csv` | 逐轮及逐种子训练日志与先验权重对照 |
-| `comparison.csv`、`curve_by_seed.csv`、`bias_by_seed.csv`、`latent_probes.csv`、`paired.csv` | 统一曲线、物理量、硬路与低附着、潜在空间及配对统计 |
-| `action_comparison.csv`、`action_ranking.csv`、`factual_comparison.csv`、`feedback.csv` | 候选动作响应、排序、高滑移、原动作和 50 ms 反馈 |
-| `refinement_grid.csv`、`refinement_by_seed.csv`、`timing.csv`、`iteration_timing.csv` | 历史长度与迭代次数、接受与拒绝、潜变幅度和效率 |
-| `stress_by_road.csv`、`stress_curves.npz`、`ambiguity.csv`、`tracking_memory*.csv` | A/B、峰值解耦、多个初值的分歧和持续记忆对照 |
-| `figures/` | 物理分布、相关矩阵、预测偏差、A/B 及解耦曲线、修正迭代和动作比较 |
+42 项测试通过，新增测试覆盖结构峰值和导数、训练专用先验、因果扭矩、轮速投影排除、在线权重不变、异常回退和留族拆分。

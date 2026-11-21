@@ -132,28 +132,10 @@
 2. **把可辨识性与模型能力分开评分。** 保留 A/B 四个覆盖级别，扩展到多条近似低滑移曲线及另一轮胎函数族。以训练路面和验证路面开发模型与校准方法，在冻结的测试路面按激励范围报告覆盖率和区间宽度。将正确函数族的 NLS、不同函数族下的 NLS、非参数拟合并列，以判断结构先验何时有益。附着估计分布和候选动作的力误差更直接服务于后续控制。 [Berntorp, Bayesian Tire-Friction Learning by Gaussian-Process State-Space Models](https://www.merl.com/publications/TR2019-051)
 3. **冻结本阶段基线，再检验递归记忆。** 首先比较同计算量下的固定窗 GRU、跨窗记忆及物理监督消融，检查它们在激励消退后能否保持合理的恒定路面判断。评估已知外部扭矩分支下的多步误差，随后再比较确定性递归状态和 RSSM 的先验与后验。后续用 Oracle-MPC 和固定 PI 作控制对照，单独量化预测参与决策的收益。 [Hafner et al., Learning Latent Dynamics for Planning from Pixels](https://proceedings.mlr.press/v97/hafner19a.html)
 
-## 7. 复现与记录
-
-在项目根目录使用 PowerShell 7。基础实验使用原 `configs/full.json`，后续诊断另用固定种子的 `configs/research_diagnosis.json`。
-
-```powershell
-uv sync --extra dev
-uv run pytest -q
-uv run abswm run --config configs/full.json --output outputs/diagnosis_reproduced
-uv run python scripts/research_diagnosis.py --run outputs/diagnosis_reproduced --config configs/research_diagnosis.json --output outputs/research_diagnosis
-```
-
-旧 `outputs/full` 的环境记录有六个现有文件的哈希与当前提交不同。原流程依据配置指纹复用数据和已完成权重，无法仅从旧输出目录确认源码来源。因此使用独立目录重跑，并在诊断清单保留基础运行的源码哈希和输入校验。三个数据划分的 NPZ、九个权重的全部张量、训练日志、开放环和原闭环的 1,440 条轨迹均与旧结果逐项一致。在线计时随运行变化。测试共 25 项，包括新增的历史截断因果性、观测区间划分、跨路置换、积分对照和 PI 回放。
+## 7. 计算开销与研究边界
 
 World、Current 各有 10,241 个可训练参数，Direct 有 10,177 个。此次独立复跑九个模型的训练总计 932 s，基础评估 441 s（Windows、PyTorch 2.8.0+cpu、配置两线程）。闭环参考更新中，World、Direct、NLS 的逐轨迹 p95 用时的均值分别约为 2.08、1.75、7.07 ms，计时包含编码加峰值搜索或拟合，不含构造历史与模拟运行。延迟取决于硬件和同机负载。
 
-| 结果文件 | 内容 |
-|---|---|
-| `diagnostic_manifest.json` 和 `windows_audit.csv` | 本次配置、基础运行计时、源码及输入 SHA-256、回放校验与窗口统计 |
-| `forecast_errors.csv`、`curve_errors.csv`、`peak_errors.csv` | 步长、观测覆盖、物理量和峰值的分项误差，含真实曲线数值对照 |
-| `pair_truth.json`、`pair_estimates.csv`、`pair_seed_spread.csv` | 双曲线真值、可达范围、条件数、拟合结果和种子间分散 |
-| `latent_probes.csv`、`latent_separation.csv`、`latent_ablations.csv`、`latent_pca.npz` | 潜在诊断、消融和 PCA 投影 |
-| `control_diagnostics.csv`、`nls_memory.csv`、`paired_distance.csv` | 控制原始行、延迟 Oracle、同历史的 NLS 记忆消融和路面簇配对 |
-| `figures/` 和 `model_sizes.csv` | 预测误差曲线、A/B 局部历史曲线比较、潜在 PCA、模型参数量及权重大小 |
+测试共 25 项，包括新增的历史截断因果性、观测区间划分、跨路置换、积分对照和 PI 回放。
 
-研究范围限于无噪声、车辆参数已知的四分之一车，在同一轮胎函数族内测试恒定附着。低滑移结论依据指定的两条测试曲线和共同激励。训练种子造成的变化只作描述，结果表未把重叠窗口或重复种子当成独立路面。第一阶段交付包括现有模型的诊断和复现脚本，后续结构和控制器的比较以本报告为起点。
+研究范围限于无噪声、车辆参数已知的四分之一车，在同一轮胎函数族内测试恒定附着。低滑移结论依据指定的两条测试曲线和共同激励。训练种子造成的变化只作描述，结果表未把重叠窗口或重复种子当成独立路面。后续结构和控制器的比较以本报告为起点。

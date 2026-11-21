@@ -70,12 +70,12 @@ B4 使用 65,536 个窗口，三个种子均完成 2,688 步和 43,008 步检查
 
 B4 同 Epoch 比 B3 同 Epoch 的轮速动作响应误差低 1.2%，轮胎力误差低 6.3%，冲量 regret 低 14.5%。轮胎力与冲量 regret 的路面配对 95% 区间分别为 [−20.61, −4.60] N 和 [−0.106, −0.005] N·s。轮速动作响应的区间跨零。固定 2,688 步时，冲量 regret 点估计增加 7.4%，三个主要指标的配对区间均跨零。B4 同 Epoch 在已测配置中验证分数最低，因此被选为 S3 的 C0。
 
-## S3 和 S4 的执行协议
+## S3 和 S4 的实验协议
 
 - S3 固定 65,536 个窗口、84 轮、43,008 次更新和批量 128。复用 300 路面 C0 权重，以相同的登记权重为起点，训练 600、1,200 和 2,400 路面的三个配置。每种配置使用种子 11、22、33。新增路面来自冻结的原 Burckhardt 采样分布，沿用原轨迹生成策略。新旧窗口匹配路面类别、初始车速和激励类型，优先保留同一采集时刻。若新轨迹更早结束或窗口索引重复，则在该轨迹的同阶段重抽。各路面覆盖和重抽次数写入数据清单。
 - S4 在 S3 选型完成后登记权重哈希、原 P0 的 50 ms MPC 设置、两种初态、升级门槛和配对统计方案，再用封存路面进行开环和闭环评价。原 E4 A、S1、S2、S3 各保留相应的代表权重，重复权重按哈希合并。NLS-MPC 与 Oracle-MPC 加入同工况闭环对照。动态路面的 Oracle 只获得当前位置的真实附着特性。所有闭环工况统一使用 2 m/s 终止条件，保留失败和超时记录。制动距离门槛要求参与该对照的工况都到达共同终止车速。
 
-S3、S4 已使用独立的小规模分区试跑，完整项目测试 70 项通过。以下正式结果来自 `outputs/training_scaling/followup/`。
+S3、S4 已使用独立的小规模分区试跑，完整项目测试 70 项通过。正式结果如下。
 
 ## S3 · Road Diversity Scaling
 
@@ -133,31 +133,3 @@ C3 改善了独立 Burckhardt 的响应和力预测。随训练规模扩大，Ma
 S1 表明原模型在现有数据上还有优化空间。S2 表明固定更新数时扩大窗口的收益不稳定，更多窗口配合更多更新才带来较明显的验证收益。S3 表明在同等训练预算下，增加同族路面还可改善力预测，跨族动作决策没有同步受益。84 轮、65,536 窗口、300 路面的 S2 在学习模型中取得最短的恒定路面制动距离。若计算预算紧张，S1 每种子约 106 秒便可改善独立开环预测，但未带来距离收益。完整 S2 B4 每种子约 1,748 秒，S3 三组每种子约 1,730–2,111 秒。大规模阶段的验证轮速响应出现边际收益递减，冲量 regret 和冻结测试未呈现共同饱和点。已有证据表明训练量曾限制同族预测，无法据此认定训练量不足是跨族或闭环决策的主要瓶颈。
 
 下一轮建议只改变一个因素，固定架构、数据、更新数和控制器，检验增加动作收益排序监督能否降低独立 Magic Formula 工况的 regret。将新试验测试划分在训练前另行冻结。
-
-## 复现
-
-在仓库根目录使用 PowerShell 7。脚本使用项目已登记的本地 E4 A、基线数据和 P0 评价配置，正式运行的训练 checkpoint 和评价缓存可以复用。
-
-```powershell
-.\.venv\Scripts\python.exe -u scripts/training_scaling_study.py --smoke --workers 1
-.\.venv\Scripts\python.exe -u scripts/training_scaling_study.py --workers 4
-.\.venv\Scripts\python.exe -u scripts/training_scaling_adam_audit.py
-.\.venv\Scripts\python.exe scripts/plot_training_scaling.py
-.\.venv\Scripts\python.exe -m pytest -q
-```
-
-B3 已完成并符合门槛时，可加 `--b4` 启动或续跑 B4。当前 B4 过程日志为 `outputs/training_scaling/b4.stdout.log` 和 `b4.stderr.log`。
-
-后续实验按顺序执行，直接复用 S1–S2 结果。
-
-```powershell
-.\.venv\Scripts\python.exe -u scripts/training_scaling_followup.py --smoke --workers 2
-.\.venv\Scripts\python.exe -u scripts/training_scaling_followup.py --stage all --workers 4
-.\.venv\Scripts\python.exe scripts/plot_training_scaling.py
-```
-
-实验目录为 `outputs/training_scaling/`。其中 `experiment.json` 记录配置和输入哈希，`frozen_partitions.json` 与 `acceptance.json` 记录封存划分和预登记门槛，`training_summary.csv` 和 `learning_curves.csv` 记录训练步数和损失分量，`action_prediction.csv` 保留逐窗口决策与风险，`paired_statistics.csv` 给出路面配对区间，`timing.csv` 给出批量 Encoder/Decoder 和候选滚动开销。图表为 `epoch_loss.png`、`window_scaling.png` 和 `updates_vs_error.png`。
-
-新增实验入口和配置为 `scripts/training_scaling_study.py`、`scripts/training_scaling_adam_audit.py`、`scripts/training_scaling_followup.py`、`scripts/plot_training_scaling.py` 与 `configs/training_scaling.json`。数据、训练、评价和编排分别位于 `src/abswm/scaling_data.py`、`src/abswm/scaling_training.py`、`src/abswm/scaling_evaluation.py` 和 `src/abswm/training_scaling.py`。S3 和 S4 实现分别位于 `src/abswm/scaling_followup.py` 与 `src/abswm/scaling_final.py`。新增测试覆盖窗口嵌套、Epoch 中途恢复的参数逐位一致性和路面嵌套的采集窗口匹配。
-
-后续目录中的 `s3_protocol.json`、`s4_policy.json` 保留训练与正式评价登记，`road_scaling.csv`、`closed_loop_summary.csv` 和 `acceptance.json` 保留阶段及验收结果。该目录的 `road_scaling.png` 和 `final_braking.png` 分别展示验证误差与路面数的关系、正式测试的制动距离配对区间及抱死时间。
